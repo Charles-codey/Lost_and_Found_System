@@ -40,3 +40,86 @@
 (define-map user-found-items principal uint)
 (define-map item-ratings uint uint)
 (define-map user-reputation principal uint)
+
+;; Read-only functions
+;; #[allow(unchecked_data)]
+(define-read-only (get-item (item-id uint))
+  (map-get? lost-items item-id)
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-user-report-count (user principal))
+  (default-to u0 (map-get? user-reports user))
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-user-claim-count (user principal))
+  (default-to u0 (map-get? user-claims user))
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-user-found-count (user principal))
+  (default-to u0 (map-get? user-found-items user))
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-item-nonce)
+  (var-get item-nonce)
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-total-items-reported)
+  (var-get total-items-reported)
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-total-items-claimed)
+  (var-get total-items-claimed)
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-total-items-found)
+  (var-get total-items-found)
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-item-rating (item-id uint))
+  (default-to u0 (map-get? item-ratings item-id))
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-user-reputation (user principal))
+  (default-to u0 (map-get? user-reputation user))
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (is-item-verified (item-id uint))
+  (match (map-get? lost-items item-id)
+    item (ok (get verified item))
+    err-not-found
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-item-status (item-id uint))
+  (match (map-get? lost-items item-id)
+    item (ok (get status item))
+    err-not-found
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-item-category (item-id uint))
+  (match (map-get? lost-items item-id)
+    item (ok (get category item))
+    err-not-found
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-read-only (get-item-reward (item-id uint))
+  (match (map-get? lost-items item-id)
+    item (ok (get reward item))
+    err-not-found
+  )
+)
