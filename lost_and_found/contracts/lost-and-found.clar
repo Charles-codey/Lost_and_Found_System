@@ -123,3 +123,132 @@
     err-not-found
   )
 )
+
+;; Public functions
+;; #[allow(unchecked_data)]
+(define-public (report-lost-item 
+  (item-name (string-ascii 100)) 
+  (description (string-ascii 300)) 
+  (location (string-ascii 100))
+  (category (string-ascii 50))
+  (reward uint))
+  (let
+    (
+      (item-id (var-get item-nonce))
+      (sender tx-sender)
+    )
+    (map-set lost-items item-id
+      {
+        reporter: sender,
+        item-name: item-name,
+        description: description,
+        location: location,
+        date-reported: stacks-block-height,
+        status: "lost",
+        claimer: none,
+        category: category,
+        reward: reward,
+        verified: false
+      }
+    )
+    (map-set user-reports sender (+ (get-user-report-count sender) u1))
+    (var-set item-nonce (+ item-id u1))
+    (var-set total-items-reported (+ (var-get total-items-reported) u1))
+    (ok item-id)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (claim-item (item-id uint))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+      (sender tx-sender)
+    )
+    (asserts! (is-eq (get status item) "lost") err-already-claimed)
+    (map-set lost-items item-id 
+      (merge item { 
+        status: "claimed", 
+        claimer: (some sender) 
+      })
+    )
+    (map-set user-claims sender (+ (get-user-claim-count sender) u1))
+    (var-set total-items-claimed (+ (var-get total-items-claimed) u1))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (mark-as-found (item-id uint))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender (get reporter item)) err-unauthorized)
+    (map-set lost-items item-id (merge item { status: "found" }))
+    (map-set user-found-items tx-sender (+ (get-user-found-count tx-sender) u1))
+    (var-set total-items-found (+ (var-get total-items-found) u1))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (verify-item (item-id uint))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender contract-owner) err-unauthorized)
+    (map-set lost-items item-id (merge item { verified: true }))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (cancel-report (item-id uint))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender (get reporter item)) err-unauthorized)
+    (asserts! (is-eq (get status item) "lost") err-invalid-status)
+    (map-set lost-items item-id (merge item { status: "cancelled" }))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (reopen-report (item-id uint))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender (get reporter item)) err-unauthorized)
+    (asserts! (is-eq (get status item) "cancelled") err-invalid-status)
+    (map-set lost-items item-id (merge item { status: "lost", claimer: none }))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (resolve-claim (item-id uint) (approved bool))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+      (claimer-principal (unwrap! (get claimer item) err-not-found))
+    )
+    (asserts! (is-eq tx-sender (get reporter item)) err-unauthorized)
+    (asserts! (is-eq (get status item) "claimed") err-invalid-status)
+    (if approved
+      (begin
+        (map-set lost-items item-id (merge item { status: "resolved" }))
+        (map-set user-reputation claimer-principal (+ (get-user-reputation claimer-principal) u10))
+        (ok true)
+      )
+      (begin
+        (map-set lost-items item-id (merge item { status: "lost", claimer: none }))
+        (ok false)
+      )
+    )
+  )
+)
