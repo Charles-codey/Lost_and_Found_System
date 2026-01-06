@@ -252,3 +252,109 @@
     )
   )
 )
+
+;; #[allow(unchecked_data)]
+(define-public (update-item-status (item-id uint) (new-status (string-ascii 20)))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender (get reporter item)) err-unauthorized)
+    (map-set lost-items item-id (merge item { status: new-status }))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (update-item-location (item-id uint) (new-location (string-ascii 100)))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender (get reporter item)) err-unauthorized)
+    (map-set lost-items item-id (merge item { location: new-location }))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (update-item-reward (item-id uint) (new-reward uint))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender (get reporter item)) err-unauthorized)
+    (asserts! (> new-reward u0) err-invalid-reward)
+    (map-set lost-items item-id (merge item { reward: new-reward }))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (update-item-description (item-id uint) (new-description (string-ascii 300)))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender (get reporter item)) err-unauthorized)
+    (map-set lost-items item-id (merge item { description: new-description }))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (update-item-category (item-id uint) (new-category (string-ascii 50)))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender (get reporter item)) err-unauthorized)
+    (map-set lost-items item-id (merge item { category: new-category }))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (transfer-item-ownership (item-id uint) (new-owner principal))
+  (let
+    (
+      (item (unwrap! (map-get? lost-items item-id) err-not-found))
+    )
+    (asserts! (is-eq tx-sender (get reporter item)) err-unauthorized)
+    (map-set lost-items item-id (merge item { reporter: new-owner }))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (rate-item (item-id uint) (rating uint))
+  (begin
+    (asserts! (<= rating u5) (err u108))
+    (map-set item-ratings item-id rating)
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (increase-user-reputation (user principal) (points uint))
+  (let
+    (
+      (current-rep (get-user-reputation user))
+    )
+    (asserts! (is-eq tx-sender contract-owner) err-unauthorized)
+    (map-set user-reputation user (+ current-rep points))
+    (ok true)
+  )
+)
+
+;; #[allow(unchecked_data)]
+(define-public (decrease-user-reputation (user principal) (points uint))
+  (let
+    (
+      (current-rep (get-user-reputation user))
+    )
+    (asserts! (is-eq tx-sender contract-owner) err-unauthorized)
+    (map-set user-reputation user (if (>= current-rep points) (- current-rep points) u0))
+    (ok true)
+  )
+)
